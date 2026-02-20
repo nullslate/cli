@@ -265,6 +265,29 @@ fn main() -> Result<()> {
             eprintln!("Warning: Failed to run npm install: {}", e);
             eprintln!("You can run it manually with: cd {} && npm install", output_path.display());
         }
+
+        // Update sandybridge packages to latest versions
+        let pb = ProgressBar::new_spinner();
+        pb.set_style(
+            ProgressStyle::default_spinner()
+                .template("{spinner:.green} {msg}")
+                .unwrap(),
+        );
+        pb.set_message("Updating @thesandybridge packages to latest...");
+        pb.enable_steady_tick(std::time::Duration::from_millis(100));
+
+        let update_status = Command::new("npm")
+            .args(["install", "@thesandybridge/themes@latest", "@thesandybridge/ui@latest"])
+            .current_dir(&output_path)
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .status();
+
+        pb.finish_and_clear();
+
+        if let Err(e) = update_status {
+            eprintln!("Warning: Failed to update @thesandybridge packages: {}", e);
+        }
     }
 
     println!();
@@ -336,7 +359,6 @@ fn update_package_json(
 
     // Add docs dependencies
     if include_docs {
-        deps.insert("@thesandybridge/ui".to_string(), serde_json::json!("^1.0.0"));
         deps.insert("gray-matter".to_string(), serde_json::json!("^4.0.3"));
     }
 
