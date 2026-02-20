@@ -3,6 +3,7 @@ use clap::Parser;
 use console::{style, Emoji};
 use dialoguer::{theme::ColorfulTheme, Confirm, Input};
 use indicatif::{ProgressBar, ProgressStyle};
+use rand::Rng;
 use regex::Regex;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -52,6 +53,10 @@ struct Args {
     /// Custom template repository URL
     #[arg(long, default_value = DEFAULT_TEMPLATE_REPO)]
     template: String,
+
+    /// Accept all defaults without prompting
+    #[arg(short, long)]
+    yes: bool,
 }
 
 fn main() -> Result<()> {
@@ -60,9 +65,14 @@ fn main() -> Result<()> {
     // Get project name interactively if not provided
     let project_name = match args.name {
         Some(name) => name,
-        None => Input::with_theme(&ColorfulTheme::default())
-            .with_prompt("Project name")
-            .interact_text()?,
+        None => {
+            if args.yes {
+                anyhow::bail!("Project name is required when using --yes flag");
+            }
+            Input::with_theme(&ColorfulTheme::default())
+                .with_prompt("Project name")
+                .interact_text()?
+        }
     };
 
     // Validate project name
@@ -83,11 +93,16 @@ fn main() -> Result<()> {
     }
 
     // Ask about features if not specified via flags
-    let include_docs = args.docs
-        || Confirm::with_theme(&ColorfulTheme::default())
+    let include_docs = if args.docs {
+        true
+    } else if args.yes {
+        false // Default to no docs when using --yes
+    } else {
+        Confirm::with_theme(&ColorfulTheme::default())
             .with_prompt("Include documentation system (MDX)?")
             .default(false)
-            .interact()?;
+            .interact()?
+    };
 
     let include_auth = !args.no_auth;
     let include_db = args.db != "none";
@@ -179,6 +194,16 @@ fn main() -> Result<()> {
 
     // Update package.json with additional dependencies based on features
     update_package_json(&output_path, include_docs, include_auth, include_db)?;
+
+    // Clean up layout.tsx if auth is disabled
+    if !include_auth {
+        cleanup_layout_for_no_auth(&output_path)?;
+    }
+
+    // Generate .env file with random secrets if auth is enabled
+    if include_auth {
+        generate_env_file(&output_path)?;
+    }
 
     println!(
         "{} {}Finalizing project...",
@@ -335,5 +360,53 @@ fn update_package_json(
     let formatted = serde_json::to_string_pretty(&package)?;
     fs::write(&package_json_path, formatted)?;
 
+    Ok(())
+}
+
+fn cleanup_layout_for_no_auth(output_path: &Path) -> Result<()> {
+    let layout_path = output_path.join("app/layout.tsx");
+    let content = fs::read_to_string(&layout_path)?;
+
+    // Remove SessionProvider import
+    let content = content.replace(
+        "import { SessionProvider } from \"@/components/session-provider\";\n",
+        "",
+    );
+
+    // Remove SessionProvider wrapper (preserving inner content)
+    let content = content.replace("        <SessionProvider>\n", "");
+    let content = content.replace("        </SessionProvider>\n", "");
+
+    fs::write(&layout_path, content)?;
+    Ok(())
+}
+
+fn generate_random_secret() -> String {
+    let mut rng = rand::thread_rng();
+    let bytes: [u8; 32] = rng.gen();
+    bytes.iter().map(|b| format!("{:02x}", b)).collect()
+}
+
+fn generate_env_file(output_path: &Path) -> Result<()> {
+    let env_path = output_path.join(".env");
+    let auth_secret = generate_random_secret();
+    let jwt_secret = generate_random_secret();
+
+    let env_content = format!(
+        r#"# Database
+DATABASE_URL=postgresql://user:password@localhost:5432/dbname
+
+# Auth (GitHub OAuth)
+AUTH_SECRET={}
+AUTH_GITHUB_ID=your-github-oauth-app-id
+AUTH_GITHUB_SECRET=your-github-oauth-app-secret
+
+# Optional: For API token signing
+JWT_SECRET={}
+"#,
+        auth_secret, jwt_secret
+    );
+
+    fs::write(&env_path, env_content)?;
     Ok(())
 }
