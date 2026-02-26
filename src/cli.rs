@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
-const DEFAULT_TEMPLATE_REPO: &str = "https://github.com/nullslate/cli.git";
+const DEFAULT_TEMPLATE_REPO: &str = "https://github.com/nullslate/app-template.git";
 
 #[derive(Parser, Debug)]
 #[command(name = "nullslate")]
