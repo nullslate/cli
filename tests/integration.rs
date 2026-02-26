@@ -100,3 +100,90 @@ fn scaffold_with_auth() {
         ".env should not contain JWT_SECRET"
     );
 }
+
+#[test]
+#[ignore] // requires network for git clone
+fn scaffold_lib_project() {
+    let bin = cargo_bin();
+    let dir = tempfile::tempdir().unwrap();
+    let project_path = dir.path().join("test-lib");
+
+    let status = Command::new(&bin)
+        .args([
+            "init",
+            "test-lib",
+            "--lib",
+            "--no-git",
+            "--no-install",
+            "--react",
+            "--testing",
+            "-y",
+            "--path",
+            project_path.to_str().unwrap(),
+        ])
+        .status()
+        .expect("Failed to run CLI");
+
+    assert!(status.success(), "CLI exited with error");
+    assert!(project_path.exists(), "Project directory not created");
+    assert!(
+        project_path.join("package.json").exists(),
+        "package.json not found"
+    );
+    assert!(
+        project_path.join("tsup.config.ts").exists(),
+        "tsup.config.ts not found"
+    );
+    assert!(
+        project_path.join("src/components").exists(),
+        "React components should be included"
+    );
+    assert!(
+        project_path.join("vitest.config.ts").exists(),
+        "vitest.config.ts should be included"
+    );
+    assert!(
+        !project_path.join("src/styles").exists(),
+        "CSS should be excluded (not requested)"
+    );
+}
+
+#[test]
+#[ignore] // requires network for git clone
+fn scaffold_minimal_lib() {
+    let bin = cargo_bin();
+    let dir = tempfile::tempdir().unwrap();
+    let project_path = dir.path().join("test-lib-min");
+
+    let status = Command::new(&bin)
+        .args([
+            "init",
+            "test-lib-min",
+            "--lib",
+            "--no-git",
+            "--no-install",
+            "-y",
+            "--path",
+            project_path.to_str().unwrap(),
+        ])
+        .status()
+        .expect("Failed to run CLI");
+
+    assert!(status.success(), "CLI exited with error");
+    assert!(
+        !project_path.join("src/components").exists(),
+        "React should be excluded"
+    );
+    assert!(
+        !project_path.join("src/styles").exists(),
+        "CSS should be excluded"
+    );
+    assert!(
+        !project_path.join("vitest.config.ts").exists(),
+        "Testing should be excluded"
+    );
+    assert!(
+        project_path.join("tsconfig.json").exists(),
+        "TypeScript should be default"
+    );
+}
