@@ -61,15 +61,27 @@ pub fn outro_success(project_name: &str, output_path: &std::path::Path, no_insta
     let _ = cliclack::outro(msg);
 }
 
+pub fn outro_success_fullstack(project_name: &str, output_path: &std::path::Path) {
+    let msg = format!(
+        "Created {} at {}\n\n  Next steps:\n    cd {}\n    ns dev",
+        project_name,
+        output_path.display(),
+        project_name,
+    );
+    let _ = cliclack::outro(msg);
+}
+
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum ProjectType {
     App,
+    Fullstack,
     Lib,
 }
 
 pub fn prompt_project_type() -> Result<ProjectType> {
     let project_type: ProjectType = cliclack::select("What are you building?")
         .item(ProjectType::App, "Application", "Full-stack TanStack Start app")
+        .item(ProjectType::Fullstack, "Fullstack", "Rust API + TanStack Start frontend with devforge")
         .item(ProjectType::Lib, "Library", "Publishable package (Vite lib mode + tsup)")
         .interact()?;
     Ok(project_type)
