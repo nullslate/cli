@@ -35,10 +35,14 @@ pub fn clone_template(template_url: &str, dest: &Path) -> Result<()> {
         clone_dir.clone()
     };
 
-    // Move contents from source to dest
+    // Move contents from source to dest, skipping .git
     for entry in fs::read_dir(&source)? {
         let entry = entry?;
-        let target = dest.join(entry.file_name());
+        let name = entry.file_name();
+        if name == ".git" {
+            continue;
+        }
+        let target = dest.join(&name);
         fs::rename(entry.path(), target)?;
     }
 
@@ -124,7 +128,7 @@ pub fn init_git(output_path: &Path) -> Result<()> {
 }
 
 pub fn install_deps(output_path: &Path) -> Result<()> {
-    let status = Command::new("npm")
+    let status = Command::new("bun")
         .args(["install"])
         .current_dir(output_path)
         .stdout(std::process::Stdio::null())
@@ -133,19 +137,19 @@ pub fn install_deps(output_path: &Path) -> Result<()> {
 
     if let Err(e) = status {
         eprintln!(
-            "Warning: Failed to run npm install: {}",
+            "Warning: Failed to run bun install: {}",
             e
         );
         eprintln!(
-            "You can run it manually with: cd {} && npm install",
+            "You can run it manually with: cd {} && bun install",
             output_path.display()
         );
     }
 
     // Update packages to latest versions
-    let update_status = Command::new("npm")
+    let update_status = Command::new("bun")
         .args([
-            "install",
+            "add",
             "@thesandybridge/themes@latest",
             "@thesandybridge/ui@latest",
         ])
