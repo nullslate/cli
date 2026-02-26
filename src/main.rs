@@ -1,5 +1,6 @@
 mod cli;
 mod features;
+mod fullstack;
 mod template;
 mod ui;
 
@@ -15,8 +16,8 @@ use features::{
 };
 use template::{clone_template, copy_template, init_git, install_deps};
 use ui::{
-    create_spinner, outro_cancel, outro_success, outro_success_lib, Feature, Language, LibFeature,
-    ProjectType,
+    create_spinner, outro_cancel, outro_success, outro_success_fullstack, outro_success_lib,
+    Feature, Language, LibFeature, ProjectType,
 };
 
 fn main() -> Result<()> {
@@ -62,17 +63,29 @@ fn cmd_init(args: InitArgs) -> Result<()> {
     }
 
     // Determine project type
-    let is_lib = if args.yes {
-        args.lib || args.project_type == "lib"
+    let project_type = if args.yes {
+        if args.fullstack || args.project_type == "fullstack" {
+            ProjectType::Fullstack
+        } else if args.lib || args.project_type == "lib" {
+            ProjectType::Lib
+        } else {
+            ProjectType::App
+        }
     } else {
-        let pt = ui::prompt_project_type()?;
-        pt == ProjectType::Lib
+        ui::prompt_project_type()?
     };
 
     let template_url = args
         .template
         .clone()
-        .unwrap_or_else(|| default_template_url(is_lib).to_string());
+        .unwrap_or_else(|| {
+            let pt = match project_type {
+                ProjectType::Fullstack => "fullstack",
+                ProjectType::Lib => "lib",
+                ProjectType::App => "app",
+            };
+            default_template_url(pt).to_string()
+        });
 
     // Clone template
     let temp_dir = tempfile::tempdir()?;
@@ -82,10 +95,10 @@ fn cmd_init(args: InitArgs) -> Result<()> {
     clone_template(&template_url, temp_path)?;
     spinner.stop("Template fetched");
 
-    if is_lib {
-        cmd_init_lib(&args, &project_name, &output_path, temp_path)?;
-    } else {
-        cmd_init_app(&args, &project_name, &output_path, temp_path)?;
+    match project_type {
+        ProjectType::Lib => cmd_init_lib(&args, &project_name, &output_path, temp_path)?,
+        ProjectType::Fullstack => cmd_init_fullstack(&args, &project_name, &output_path, temp_path)?,
+        ProjectType::App => cmd_init_app(&args, &project_name, &output_path, temp_path)?,
     }
 
     if !args.no_git {
@@ -94,16 +107,31 @@ fn cmd_init(args: InitArgs) -> Result<()> {
         spinner.stop("Git initialized");
     }
 
-    if !args.no_install {
-        let spinner = create_spinner("Installing dependencies...");
-        install_deps(&output_path)?;
-        spinner.stop("Dependencies installed");
-    }
-
-    if is_lib {
-        outro_success_lib(&project_name, &output_path, args.no_install);
-    } else {
-        outro_success(&project_name, &output_path, args.no_install);
+    match project_type {
+        ProjectType::Fullstack => {
+            if !args.no_install {
+                let spinner = create_spinner("Installing dependencies...");
+                install_deps(&output_path.join("web"))?;
+                spinner.stop("Dependencies installed");
+            }
+            outro_success_fullstack(&project_name, &output_path);
+        }
+        ProjectType::Lib => {
+            if !args.no_install {
+                let spinner = create_spinner("Installing dependencies...");
+                install_deps(&output_path)?;
+                spinner.stop("Dependencies installed");
+            }
+            outro_success_lib(&project_name, &output_path, args.no_install);
+        }
+        ProjectType::App => {
+            if !args.no_install {
+                let spinner = create_spinner("Installing dependencies...");
+                install_deps(&output_path)?;
+                spinner.stop("Dependencies installed");
+            }
+            outro_success(&project_name, &output_path, args.no_install);
+        }
     }
 
     Ok(())
@@ -139,6 +167,30 @@ fn cmd_init_app(
     if include_auth {
         generate_env_file(output_path)?;
     }
+
+    spinner.stop("Files processed");
+    Ok(())
+}
+
+fn cmd_init_fullstack(
+    args: &InitArgs,
+    project_name: &str,
+    output_path: &PathBuf,
+    temp_path: &std::path::Path,
+) -> Result<()> {
+    let (include_auth, include_docs) = if args.yes {
+        (!args.no_auth, args.docs)
+    } else {
+        let selected = ui::prompt_features()?;
+        (
+            selected.contains(&Feature::Auth),
+            selected.contains(&Feature::Docs),
+        )
+    };
+
+    let spinner = create_spinner("Processing files...");
+
+    fullstack::scaffold_fullstack(temp_path, output_path, project_name, include_auth, include_docs)?;
 
     spinner.stop("Files processed");
     Ok(())
