@@ -61,6 +61,67 @@ pub fn outro_success(project_name: &str, output_path: &std::path::Path, no_insta
     let _ = cliclack::outro(msg);
 }
 
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub enum ProjectType {
+    App,
+    Lib,
+}
+
+pub fn prompt_project_type() -> Result<ProjectType> {
+    let project_type: ProjectType = cliclack::select("What are you building?")
+        .item(ProjectType::App, "Application", "Full-stack TanStack Start app")
+        .item(ProjectType::Lib, "Library", "Publishable package (Vite lib mode + tsup)")
+        .interact()?;
+    Ok(project_type)
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub enum LibFeature {
+    React,
+    Css,
+    Testing,
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub enum Language {
+    TypeScript,
+    JavaScript,
+}
+
+pub fn prompt_language() -> Result<Language> {
+    let lang: Language = cliclack::select("Language")
+        .item(Language::TypeScript, "TypeScript", "Recommended")
+        .item(Language::JavaScript, "JavaScript", "Plain JS, no type checking")
+        .interact()?;
+    Ok(lang)
+}
+
+pub fn prompt_lib_features() -> Result<Vec<LibFeature>> {
+    let features: Vec<LibFeature> = cliclack::multiselect("Select features")
+        .item(LibFeature::React, "React", "JSX support, React peer dependency")
+        .item(LibFeature::Css, "CSS/Tailwind", "Tailwind CSS styling")
+        .item(LibFeature::Testing, "Testing", "Vitest test setup")
+        .required(false)
+        .interact()?;
+    Ok(features)
+}
+
+pub fn outro_success_lib(project_name: &str, output_path: &std::path::Path, no_install: bool) {
+    let mut next_steps = format!("cd {}", project_name);
+    if no_install {
+        next_steps.push_str("\n    bun install");
+    }
+    next_steps.push_str("\n    bun run build");
+
+    let msg = format!(
+        "Created {} at {}\n\n  Next steps:\n    {}",
+        project_name,
+        output_path.display(),
+        next_steps
+    );
+    let _ = cliclack::outro(msg);
+}
+
 pub fn outro_cancel(message: &str) {
     let _ = cliclack::outro_cancel(message);
 }
