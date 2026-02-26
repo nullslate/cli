@@ -1,6 +1,7 @@
 mod cli;
 mod features;
 mod fullstack;
+mod runner;
 mod template;
 mod ui;
 
@@ -25,6 +26,8 @@ fn main() -> Result<()> {
 
     match cli.command {
         Commands::Init(args) => cmd_init(args),
+        Commands::Dev => runner::cmd_dev(),
+        Commands::Build => runner::cmd_build(),
     }
 }
 

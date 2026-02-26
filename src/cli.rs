@@ -25,6 +25,10 @@ pub struct Cli {
 pub enum Commands {
     /// Scaffold a new project
     Init(InitArgs),
+    /// Start the dev environment (auto-detects project type)
+    Dev,
+    /// Build the project (auto-detects project type)
+    Build,
 }
 
 #[derive(Parser, Debug)]
