@@ -3,12 +3,13 @@ use std::path::PathBuf;
 
 const DEFAULT_TEMPLATE_REPO: &str = "https://github.com/nullslate/app-template.git";
 const DEFAULT_LIB_TEMPLATE_REPO: &str = "https://github.com/nullslate/lib-template.git";
+const DEFAULT_FULLSTACK_TEMPLATE_REPO: &str = "https://github.com/nullslate/app-template.git";
 
-pub fn default_template_url(is_lib: bool) -> &'static str {
-    if is_lib {
-        DEFAULT_LIB_TEMPLATE_REPO
-    } else {
-        DEFAULT_TEMPLATE_REPO
+pub fn default_template_url(project_type: &str) -> &'static str {
+    match project_type {
+        "lib" => DEFAULT_LIB_TEMPLATE_REPO,
+        "fullstack" => DEFAULT_FULLSTACK_TEMPLATE_REPO,
+        _ => DEFAULT_TEMPLATE_REPO,
     }
 }
 
@@ -67,6 +68,10 @@ pub struct InitArgs {
     /// Shorthand for --project-type lib
     #[arg(long)]
     pub lib: bool,
+
+    /// Shorthand for --project-type fullstack
+    #[arg(long)]
+    pub fullstack: bool,
 
     /// Language: typescript or javascript (lib only)
     #[arg(long, default_value = "typescript")]
