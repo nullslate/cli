@@ -48,9 +48,9 @@ pub fn create_spinner(message: &str) -> cliclack::ProgressBar {
 pub fn outro_success(project_name: &str, output_path: &std::path::Path, no_install: bool) {
     let mut next_steps = format!("cd {}", project_name);
     if no_install {
-        next_steps.push_str("\n    npm install");
+        next_steps.push_str("\n    bun install");
     }
-    next_steps.push_str("\n    npm run dev");
+    next_steps.push_str("\n    bun dev");
 
     let msg = format!(
         "Created {} at {}\n\n  Next steps:\n    {}",
