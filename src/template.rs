@@ -6,14 +6,18 @@ use walkdir::WalkDir;
 
 use crate::features::should_skip_file;
 
+const TEMPLATE_SUBDIR: &str = "template";
+
 pub fn clone_template(template_url: &str, dest: &Path) -> Result<()> {
+    let clone_dir = dest.join("_clone");
+
     let status = Command::new("git")
         .args([
             "clone",
             "--depth",
             "1",
             template_url,
-            dest.to_str().unwrap(),
+            clone_dir.to_str().unwrap(),
         ])
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
@@ -24,11 +28,22 @@ pub fn clone_template(template_url: &str, dest: &Path) -> Result<()> {
         anyhow::bail!("Failed to clone template from {}", template_url);
     }
 
-    // Remove .git from template
-    let git_dir = dest.join(".git");
-    if git_dir.exists() {
-        fs::remove_dir_all(&git_dir)?;
+    // If the clone contains a template/ subdirectory, use that as the source
+    let source = if clone_dir.join(TEMPLATE_SUBDIR).is_dir() {
+        clone_dir.join(TEMPLATE_SUBDIR)
+    } else {
+        clone_dir.clone()
+    };
+
+    // Move contents from source to dest
+    for entry in fs::read_dir(&source)? {
+        let entry = entry?;
+        let target = dest.join(entry.file_name());
+        fs::rename(entry.path(), target)?;
     }
+
+    // Clean up the clone directory
+    fs::remove_dir_all(&clone_dir)?;
 
     Ok(())
 }
