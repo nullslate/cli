@@ -128,26 +128,36 @@ pub fn init_git(output_path: &Path) -> Result<()> {
 }
 
 pub fn install_deps(output_path: &Path) -> Result<()> {
-    let status = Command::new("bun")
+    let output = Command::new("bun")
         .args(["install"])
         .current_dir(output_path)
         .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::null())
-        .status();
+        .stderr(std::process::Stdio::piped())
+        .output();
 
-    if let Err(e) = status {
-        eprintln!(
-            "Warning: Failed to run bun install: {}",
-            e
-        );
-        eprintln!(
-            "You can run it manually with: cd {} && bun install",
-            output_path.display()
-        );
+    match output {
+        Ok(out) if !out.status.success() => {
+            let stderr = String::from_utf8_lossy(&out.stderr);
+            eprintln!("Warning: bun install failed:\n{}", stderr.trim());
+            eprintln!(
+                "You can run it manually with: cd {} && bun install",
+                output_path.display()
+            );
+            return Ok(());
+        }
+        Err(e) => {
+            eprintln!("Warning: Failed to run bun install: {}", e);
+            eprintln!(
+                "You can run it manually with: cd {} && bun install",
+                output_path.display()
+            );
+            return Ok(());
+        }
+        _ => {}
     }
 
     // Update packages to latest versions
-    let update_status = Command::new("bun")
+    let update_output = Command::new("bun")
         .args([
             "add",
             "@thesandybridge/themes@latest",
@@ -155,14 +165,18 @@ pub fn install_deps(output_path: &Path) -> Result<()> {
         ])
         .current_dir(output_path)
         .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::null())
-        .status();
+        .stderr(std::process::Stdio::piped())
+        .output();
 
-    if let Err(e) = update_status {
-        eprintln!(
-            "Warning: Failed to update packages: {}",
-            e
-        );
+    match update_output {
+        Ok(out) if !out.status.success() => {
+            let stderr = String::from_utf8_lossy(&out.stderr);
+            eprintln!("Warning: Failed to update packages:\n{}", stderr.trim());
+        }
+        Err(e) => {
+            eprintln!("Warning: Failed to update packages: {}", e);
+        }
+        _ => {}
     }
 
     Ok(())
