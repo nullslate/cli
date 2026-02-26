@@ -1,6 +1,6 @@
-# create-sandybridge-app
+# nullslate
 
-A CLI tool for scaffolding new sandybridge.io projects.
+CLI for the nullslate dev tooling ecosystem.
 
 ## Installation
 
@@ -8,26 +8,27 @@ A CLI tool for scaffolding new sandybridge.io projects.
 cargo install --path .
 ```
 
-Or build and symlink manually:
-
-```bash
-cargo build --release
-ln -s $(pwd)/target/release/create-sandybridge-app ~/.cargo/bin/create-sandybridge-app
-```
-
 ## Usage
 
 ```bash
-create-sandybridge-app <project-name> [OPTIONS]
+nullslate <command> [options]
+# or use the short alias:
+ns <command> [options]
 ```
 
-### Options
+### Commands
+
+#### `init` — Scaffold a new project
+
+```bash
+nullslate init <project-name> [OPTIONS]
+```
 
 | Flag | Description |
 |------|-------------|
 | `--docs` | Include MDX documentation system |
-| `--no-auth` | Skip next-auth authentication setup |
-| `--db <type>` | Database type: `postgres` (default) or `none` |
+| `--no-auth` | Skip Auth.js authentication setup |
+| `--db <type>` | Database type: `postgres` or `none` (default) |
 | `--path <dir>` | Output directory (default: `./<project-name>`) |
 | `--no-git` | Skip git initialization |
 | `--no-install` | Skip npm install |
@@ -36,58 +37,43 @@ create-sandybridge-app <project-name> [OPTIONS]
 
 ### Examples
 
-**Create a full-featured app (default):**
+**Interactive mode:**
 ```bash
-create-sandybridge-app my-app
+nullslate init my-app
 ```
 
-**Create an app with documentation:**
+**With all features:**
 ```bash
-create-sandybridge-app my-docs-app --docs
+ns init my-app --docs --db postgres
 ```
 
-**Create a minimal app without auth or database:**
+**Non-interactive (CI):**
 ```bash
-create-sandybridge-app my-simple-app --no-auth --db none
-```
-
-**Non-interactive mode (CI/scripts):**
-```bash
-create-sandybridge-app my-app -y
+nullslate init my-app -y
 ```
 
 ## What's Included
 
-By default, projects include:
+Scaffolded projects include:
 
-- **Next.js 15** with App Router and Turbopack
-- **TypeScript** configuration
+- **Vite** with React 19 and TanStack Router
+- **TypeScript**
 - **Tailwind CSS 4** with theme support
-- **shadcn/ui** components via `@thesandybridge/ui`
-- **Theme system** via `@thesandybridge/themes` (light/dark mode, cross-subdomain cookies)
-- **next-auth v5** with GitHub OAuth (unless `--no-auth`)
-- **PostgreSQL** database setup (unless `--db none`)
-- **React Query** for data fetching
+- **shadcn/ui** components
+- **TanStack React Query** for server state
 
 ### Optional Features
 
-- **MDX Documentation** (`--docs`): Adds a docs system with Shiki syntax highlighting
+- **Authentication**: Auth.js with GitHub OAuth
+- **Documentation**: MDX docs system
+- **Database**: PostgreSQL via `pg`
 
 ## Environment Variables
 
-When auth is enabled, a `.env` file is generated with random secrets:
+When auth is enabled, a `.env` file is generated:
 
 ```env
-DATABASE_URL=postgresql://user:password@localhost:5432/dbname
 AUTH_SECRET=<random-64-char-hex>
-AUTH_GITHUB_ID=your-github-oauth-app-id
-AUTH_GITHUB_SECRET=your-github-oauth-app-secret
-JWT_SECRET=<random-64-char-hex>
+AUTH_GITHUB_ID=
+AUTH_GITHUB_SECRET=
 ```
-
-## Template Repository
-
-The default template is fetched from:
-https://github.com/thesandybridge/app-template
-
-You can use a custom template with `--template <url>`.
