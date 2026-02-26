@@ -1,5 +1,5 @@
 use anyhow::Result;
-use rand::Rng;
+use rand::RngExt;
 use std::fs;
 use std::path::Path;
 
@@ -191,8 +191,7 @@ pub fn update_lib_package_json(
 }
 
 pub fn generate_random_secret() -> String {
-    let mut rng = rand::thread_rng();
-    let bytes: [u8; 32] = rng.gen();
+    let bytes: [u8; 32] = rand::rng().random();
     bytes.iter().map(|b| format!("{:02x}", b)).collect()
 }
 
